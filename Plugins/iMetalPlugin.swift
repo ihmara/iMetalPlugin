@@ -16,7 +16,7 @@ struct CIMetalPlugin: BuildToolPlugin {
         }
         
         let cache = context.pluginWorkDirectoryURL.appending(path: "cache")
-        let output = context.pluginWorkDirectoryURL.appending(path: "default.metallib")
+        let output = context.pluginWorkDirectoryURL.appending(path: "ThresholdPaintAlphaFilterKernel.ci.metallib")
         
         guard !paths.isEmpty else {
             Diagnostics.remark("No .metal files found in target directory, skipping CIMetalCompilerTool execution.")

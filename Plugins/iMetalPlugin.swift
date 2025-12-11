@@ -13,11 +13,8 @@ struct CIMetalPlugin: BuildToolPlugin {
             }
         }
 
-        // Deduplicate and sort (optional: stable order by path).
+        // Deduplicate and sort (stable and deterministic).
         let uniqueMetalURLs = Array(Set(metalURLs)).sorted { $0.path < $1.path }
-
-        let cacheURL = context.pluginWorkDirectoryURL.appending(path: "cache", directoryHint: .isDirectory)
-        let outputURL = context.pluginWorkDirectoryURL.appending(path: "ThresholdPaintAlphaFilterKernel.ci.metallib")
 
         guard !uniqueMetalURLs.isEmpty else {
             Diagnostics.remark("[CIMetalPlugin] No .metal files found in \(target.directoryURL.path). Skipping CIMetalCompilerTool.")
@@ -28,19 +25,85 @@ struct CIMetalPlugin: BuildToolPlugin {
         let names = uniqueMetalURLs.map { $0.lastPathComponent }.joined(separator: ", ")
         Diagnostics.remark("[CIMetalPlugin] Found \(uniqueMetalURLs.count) .metal file(s): \(names)")
 
-        return [
-            .buildCommand(
-                displayName: "Compile CI Metal Shaders (\(uniqueMetalURLs.count) file(s))",
+        var commands: [PackagePlugin.Command] = []
+
+        // Known single-file CI kernels to compile into their own metallibs.
+        let specialKernels: [(filename: String, cacheName: String, outputName: String, displayName: String)] = [
+            ("SpryColorKernels.ci.metal", "SpryColorKernelsCache", "SpryColorKernels.ci.metallib", "Compile SpryColorKernels"),
+            ("SpryBlendKernels.ci.metal", "SpryBlendKernelsCache", "SpryBlendKernels.ci.metallib", "Compile SpryBlendKernels")
+        ]
+
+        // Helper to build a command for a single .metal file in the special set.
+        func commandForSingleKernel(
+            named filename: String,
+            in urls: [URL],
+            context: PackagePlugin.PluginContext
+        ) throws -> PackagePlugin.Command? {
+            guard let url = urls.first(where: { $0.lastPathComponent == filename }) else {
+                return nil
+            }
+
+            guard let matching = specialKernels.first(where: { $0.filename == filename }) else {
+                Diagnostics.warning("[CIMetalPlugin] Internal: no matching special kernel metadata for \(filename)")
+                return nil
+            }
+
+            let cacheURL  = context.pluginWorkDirectoryURL.appending(path: matching.cacheName, directoryHint: .isDirectory)
+            let outputURL = context.pluginWorkDirectoryURL.appending(path: matching.outputName)
+
+            Diagnostics.remark("[CIMetalPlugin] \(matching.displayName): \(url.lastPathComponent)")
+
+            return .buildCommand(
+                displayName: "\(matching.displayName)",
                 executable: try context.tool(named: "CIMetalCompilerTool").url,
                 arguments: [
                     "--output", outputURL.path(),
                     "--cache", cacheURL.path(),
-                ] + uniqueMetalURLs.map { $0.path },
+                    url.path
+                ],
                 environment: [:],
-                inputFiles: uniqueMetalURLs,
+                inputFiles: [url],
                 outputFiles: [outputURL]
             )
-        ]
+        }
+
+        // Build commands for the special single-file kernels.
+        for kernel in specialKernels {
+            if let cmd = try commandForSingleKernel(named: kernel.filename, in: uniqueMetalURLs, context: context) {
+                commands.append(cmd)
+            }
+        }
+
+        // Compute the remainder (all .metal files that are not special).
+        let specialNames = Set(specialKernels.map { $0.filename })
+        let remainingURLs = uniqueMetalURLs
+            .filter { !specialNames.contains($0.lastPathComponent) }
+            .sorted { $0.path < $1.path } // deterministic order
+
+        if !remainingURLs.isEmpty {
+            let cacheURL  = context.pluginWorkDirectoryURL.appending(path: "cache", directoryHint: .isDirectory)
+            let outputURL = context.pluginWorkDirectoryURL.appending(path: "default.ci.metallib")
+
+            Diagnostics.remark("[CIMetalPlugin] Compile Default CI Kernels: \(remainingURLs.count) file(s)")
+
+            commands.append(
+                .buildCommand(
+                    displayName: "Compile Default CI Kernels (\(remainingURLs.count) file(s))",
+                    executable: try context.tool(named: "CIMetalCompilerTool").url,
+                    arguments: [
+                        "--output", outputURL.path(),
+                        "--cache", cacheURL.path()
+                    ] + remainingURLs.map { $0.path },
+                    environment: [:],
+                    inputFiles: remainingURLs,
+                    outputFiles: [outputURL]
+                )
+            )
+        } else {
+            Diagnostics.remark("[CIMetalPlugin] No remaining CI kernels to batch compile.")
+        }
+
+        return commands
     }
 }
 

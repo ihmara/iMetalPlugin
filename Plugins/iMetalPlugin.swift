@@ -9,7 +9,9 @@ struct CIMetalPlugin: BuildToolPlugin {
         
         URL(string: target.directory.string)?.walk { path in
             if path.pathExtension == "metal" {
-                paths.append(path)
+                if !paths.contains(path) {
+                    paths.append(path)
+                }
             }
         }
         

@@ -4,12 +4,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "iMetalPlugin",
+    name: "SpryMetalPlugin",
     products: [
         // Expose the build tool plugin so other packages can use it
         .plugin(
-            name: "iMetalPlugin",
-            targets: ["iMetalPlugin"]
+            name: "SpryMetalPlugin",
+            targets: ["SpryMetalPlugin"]
         ),
         // Expose the executable tool (used by the plugin)
         .executable(
@@ -24,7 +24,7 @@ let package = Package(
     targets: [
         // Build tool plugin target
         .plugin(
-            name: "iMetalPlugin",
+            name: "SpryMetalPlugin",
             capability: .buildTool(),
             dependencies: [
                 "CIMetalCompilerTool" // The executable tool used by the plugin

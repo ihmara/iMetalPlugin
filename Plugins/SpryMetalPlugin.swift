@@ -3,7 +3,7 @@ import os
 import PackagePlugin
 
 @main
-struct CIMetalPlugin: BuildToolPlugin {
+struct SpryMetalPlugin: BuildToolPlugin {
     func createBuildCommands(context: PackagePlugin.PluginContext, target: PackagePlugin.Target) async throws -> [PackagePlugin.Command] {
         // Collect all .metal files under the target directory (recursively).
         var metalURLs: [URL] = []
@@ -17,13 +17,13 @@ struct CIMetalPlugin: BuildToolPlugin {
         let uniqueMetalURLs = Array(Set(metalURLs)).sorted { $0.path < $1.path }
 
         guard !uniqueMetalURLs.isEmpty else {
-            Diagnostics.remark("[CIMetalPlugin] No .metal files found in \(target.directoryURL.path). Skipping CIMetalCompilerTool.")
+            Diagnostics.remark("[SpryMetalPlugin] No .metal files found in \(target.directoryURL.path). Skipping CIMetalCompilerTool.")
             return []
         }
 
         // Emit a concise list of discovered shader files (filenames only).
         let names = uniqueMetalURLs.map { $0.lastPathComponent }.joined(separator: ", ")
-        Diagnostics.remark("[CIMetalPlugin] Found \(uniqueMetalURLs.count) .metal file(s): \(names)")
+        Diagnostics.remark("[SpryMetalPlugin] Found \(uniqueMetalURLs.count) .metal file(s): \(names)")
 
         var commands: [PackagePlugin.Command] = []
 
@@ -44,14 +44,14 @@ struct CIMetalPlugin: BuildToolPlugin {
             }
 
             guard let matching = specialKernels.first(where: { $0.filename == filename }) else {
-                Diagnostics.warning("[CIMetalPlugin] Internal: no matching special kernel metadata for \(filename)")
+                Diagnostics.warning("[SpryMetalPlugin] Internal: no matching special kernel metadata for \(filename)")
                 return nil
             }
 
             let cacheURL  = context.pluginWorkDirectoryURL.appending(path: matching.cacheName, directoryHint: .isDirectory)
             let outputURL = context.pluginWorkDirectoryURL.appending(path: matching.outputName)
 
-            Diagnostics.remark("[CIMetalPlugin] \(matching.displayName): \(url.lastPathComponent)")
+            Diagnostics.remark("[SpryMetalPlugin] \(matching.displayName): \(url.lastPathComponent)")
 
             return .buildCommand(
                 displayName: "\(matching.displayName)",
@@ -84,7 +84,7 @@ struct CIMetalPlugin: BuildToolPlugin {
             let cacheURL  = context.pluginWorkDirectoryURL.appending(path: "cache", directoryHint: .isDirectory)
             let outputURL = context.pluginWorkDirectoryURL.appending(path: "default.ci.metallib")
 
-            Diagnostics.remark("[CIMetalPlugin] Compile Default CI Kernels: \(remainingURLs.count) file(s)")
+            Diagnostics.remark("[SpryMetalPlugin] Compile Default CI Kernels: \(remainingURLs.count) file(s)")
 
             commands.append(
                 .buildCommand(
@@ -100,7 +100,7 @@ struct CIMetalPlugin: BuildToolPlugin {
                 )
             )
         } else {
-            Diagnostics.remark("[CIMetalPlugin] No remaining CI kernels to batch compile.")
+            Diagnostics.remark("[SpryMetalPlugin] No remaining CI kernels to batch compile.")
         }
 
         return commands
@@ -119,13 +119,13 @@ private func walkDirectory(_ root: URL, visitor: (URL) -> Void) {
         includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey],
         options: options,
         errorHandler: { url, error in
-            Diagnostics.warning("[CIMetalPlugin] Failed to enumerate \(url.path): \(error.localizedDescription)")
+            Diagnostics.warning("[SpryMetalPlugin] Failed to enumerate \(url.path): \(error.localizedDescription)")
             return true // continue
         }
     )
 
     guard let e = enumerator else {
-        Diagnostics.error("[CIMetalPlugin] Could not create enumerator for \(root.path)")
+        Diagnostics.error("[SpryMetalPlugin] Could not create enumerator for \(root.path)")
         return
     }
 

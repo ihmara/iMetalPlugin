@@ -1,10 +1,10 @@
 
-# CIMetalPlugin
+# SpryMetalPlugin
 
 A Swift Package **build tool plugin** and companion executable that precompiles **Core Image Metal kernels** (`*.ci.metal`) into `.metallib` files during your package build. It walks your target directory, compiles each `.metal` to `.air`, links to per-file `.metallib`, and finally merges all **AIR** files into a single output metallib when requested.
 
 This repository contains:
-- **`CIMetalPlugin`** — a SwiftPM Build Tool Plugin that discovers `.metal` sources and invokes the compiler tool.
+- **`SpryMetalPlugin`** — a SwiftPM Build Tool Plugin that discovers `.metal` sources and invokes the compiler tool.
 - **`CIMetalCompilerTool`** — an executable that wraps `xcrun metal` and `xcrun metallib` for CI kernels.
 
 > ⚠️ The executable is **macOS-only**. It won’t run on macCatalyst/iOS simulators directly; it’s invoked at build time on macOS.
@@ -33,17 +33,16 @@ This repository contains:
 ```swift
 // Package.swift (plugin package)
 let package = Package(
-    name: "iMetalPlugin",
-    platforms: [ .macOS(.v13) ],
+    name: "SpryMetalPlugin",
     products: [
-        .plugin(name: "iMetalPlugin", targets: ["iMetalPlugin"]),
+        .plugin(name: "SpryMetalPlugin", targets: ["SpryMetalPlugin"]),
         .executable(name: "CIMetalCompilerTool", targets: ["CIMetalCompilerTool"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
     ],
     targets: [
-        .plugin(name: "iMetalPlugin", capability: .buildTool(), dependencies: ["CIMetalCompilerTool"]),
+        .plugin(name: "SpryMetalPlugin", capability: .buildTool(), dependencies: ["CIMetalCompilerTool"]),
         .executableTarget(name: "CIMetalCompilerTool", dependencies: [
             .product(name: "ArgumentParser", package: "swift-argument-parser")
         ]),
@@ -90,12 +89,12 @@ CIMetalCompilerTool --output <output.metallib> --cache <cache_dir> <input1.metal
 ```swift
 // In your app/library Package.swift
 .dependencies: [
-    .package(url: "https://github.com/your-org/iMetalPlugin.git", from: "1.0.0")
+    .package(url: "https://github.com/your-org/SpryMetalPlugin.git", from: "1.0.0")
 ],
 .targets: [
     .target(
         name: "Filters",
-        plugins: [ .plugin(name: "iMetalPlugin", package: "iMetalPlugin") ]
+        plugins: [ .plugin(name: "SpryMetalPlugin", package: "SpryMetalPlugin") ]
     )
 ]
 ```
@@ -115,7 +114,7 @@ import Metal
 
 public func makeLibrary(device: MTLDevice) throws -> MTLLibrary {
     guard let url = Bundle.module.url(forResource: "default", withExtension: "ci.metallib") else {
-        throw NSError(domain: "CIMetalPlugin", code: 1, userInfo: [NSLocalizedDescriptionKey: "ci.metallib not found in bundle"])
+        throw NSError(domain: "SpryMetalPlugin", code: 1, userInfo: [NSLocalizedDescriptionKey: "ci.metallib not found in bundle"])
     }
     return try device.makeLibrary(URL: url)
 }

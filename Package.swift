@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "SpryMetalPlugin",
+    name: "iMetalPlugin",
     products: [
         // Expose the build tool plugin so other packages can use it
         .plugin(
